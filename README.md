@@ -6,7 +6,7 @@ All core administrative and operational endpoints are secured via token-based **
 
 ---
 
-## 🚀 1. Setup Instructions
+## 1. Setup Instructions
 
 ### Prerequisites
 * **Node.js**: v18+ is required (Node native `fetch` is utilized).
@@ -50,7 +50,7 @@ A comprehensive production-grade Postman collection (`Pulse-Check-API.postman_co
 
 ---
 
-## 📊 2. Architecture & Flow
+## 2. Architecture & Flow
 
 ### Monitor Lifecycle Diagram
 ```mermaid
@@ -81,7 +81,7 @@ graph TD
 
 ---
 
-## 💎 3. Added Production Features
+## 3. Added Production Features
 
 Beyond the core requirements, this API is hardened with the following premium features:
 
@@ -94,7 +94,7 @@ Beyond the core requirements, this API is hardened with the following premium fe
 
 ---
 
-## 🔌 4. API Endpoints
+## 4. API Endpoints
 
 All endpoints are prefixed with `/api` and require authentication.
 

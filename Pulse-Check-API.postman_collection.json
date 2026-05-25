@@ -397,8 +397,7 @@
 									"    var expectedId = pm.collectionVariables.get(\"deviceId\");",
 									"    ",
 									"    pm.expect(jsonData.id).to.eql(expectedId);",
-									"    pm.expect(jsonData.time_left_ms).to.be.a(\"number\");",
-									"    pm.expect(jsonData.time_left_seconds).to.be.a(\"number\");",
+									"    pm.expect(jsonData.time_left).to.be.a(\"number\");",
 									"});"
 								],
 								"type": "text/javascript"
@@ -424,7 +423,7 @@
 								"{{deviceId}}"
 							]
 						},
-						"description": "Retrieves the full monitor state along with dynamic 'time_left_ms' and 'time_left_seconds' fields indicating how much time is left to ping before timeout."
+						"description": "Retrieves the full monitor state along with a dynamic 'time_left' field indicating how much time (in seconds) is left to ping before timeout."
 					}
 				}
 			]

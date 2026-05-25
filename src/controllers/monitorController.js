@@ -96,8 +96,7 @@ export function getMonitors(req, res, next) {
       }
       return {
         ...monitor,
-        time_left_ms,
-        time_left_seconds: Math.ceil(time_left_ms / 1000),
+        time_left: Math.ceil(time_left_ms / 1000),
       };
     });
     res.status(200).json(monitors);
@@ -123,8 +122,7 @@ export function getMonitorById(req, res, next) {
 
     res.status(200).json({
       ...monitor,
-      time_left_ms,
-      time_left_seconds: Math.ceil(time_left_ms / 1000),
+      time_left: Math.ceil(time_left_ms / 1000),
     });
   } catch (err) {
     next(err);

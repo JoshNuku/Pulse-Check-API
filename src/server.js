@@ -10,12 +10,12 @@ initializeRecovery();
 
 // 2. Start HTTP Listener
 const server = app.listen(config.PORT, () => {
-  console.log(`===============================================`);
-  console.log(`  WATCHDOG SENTINEL API SERVER STARTED         `);
-  console.log(`  Listening on port: ${config.PORT}            `);
-  console.log(`  Environment:       ${config.NODE_ENV}        `);
-  console.log(`===============================================`);
-  
+
+  console.log(`WATCHDOG SENTINEL API SERVER STARTED`);
+  console.log(`Listening on port: ${config.PORT}`);
+  console.log(`Environment: ${config.NODE_ENV}`);
+
+
   // Start the background email dispatcher loop
   startEmailWorker();
 });

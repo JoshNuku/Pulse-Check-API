@@ -36,14 +36,7 @@ npm run dev
 npm start
 ```
 
-### 4. Running Verification Diagnostic Tests
-A fully automated secured end-to-end verification script is included in the project:
-```bash
-# Ensure server is running on port 3000, then execute:
-node scratch/verify.js
-```
-
-### 5. Testing via Postman
+### 4. Testing via Postman
 A comprehensive production-grade Postman collection (`Pulse-Check-API.postman_collection.json`) is included in the root folder.
 * **API Key Header**: Secure requests automatically attach the `x-api-key: {{apiKey}}` header.
 * **Repeated Runs**: Postman pre-request scripts dynamically generate unique device IDs (`device-1779667731...`) to ensure repeat runs do not collide.

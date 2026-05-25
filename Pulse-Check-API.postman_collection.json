@@ -380,6 +380,52 @@
 						},
 						"description": "Lists all active, paused, down, and escalated monitors in the system."
 					}
+				},
+				{
+					"name": "7. Get Specific Monitor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains monitor details with time_left fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"deviceId\");",
+									"    ",
+									"    pm.expect(jsonData.id).to.eql(expectedId);",
+									"    pm.expect(jsonData.time_left_ms).to.be.a(\"number\");",
+									"    pm.expect(jsonData.time_left_seconds).to.be.a(\"number\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/{{deviceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"{{deviceId}}"
+							]
+						},
+						"description": "Retrieves the full monitor state along with dynamic 'time_left_ms' and 'time_left_seconds' fields indicating how much time is left to ping before timeout."
+					}
 				}
 			]
 		},

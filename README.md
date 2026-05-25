@@ -97,7 +97,9 @@ All endpoints are prefixed with `/api` and require authentication.
 | `POST` | `/api/monitors/:id/heartbeat` | Pings a heartbeat to reset or resume a monitor. | `x-api-key: <key>` |
 | `POST` | `/api/monitors/:id/pause` | Snoozes monitoring for maintenance. | `x-api-key: <key>` |
 | `GET` | `/api/monitors` | Lists all monitored devices and their states. | `x-api-key: <key>` |
+| `GET` | `/api/monitors/:id` | Retrieves a specific monitor and its remaining time to ping. | `x-api-key: <key>` |
 | `GET` | `/` | Public base route (Checks service health status). | *None (Public)* |
+
 
 ### Request Payload Examples
 

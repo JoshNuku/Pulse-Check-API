@@ -87,8 +87,45 @@ export function pauseMonitor(req, res, next) {
 
 export function getMonitors(req, res, next) {
   try {
-    const monitors = getAllMonitors();
+    const monitors = getAllMonitors().map(monitor => {
+      let time_left_ms = 0;
+      if (monitor.status === 'active' && monitor.expires_at) {
+        time_left_ms = Math.max(0, monitor.expires_at - Date.now());
+      } else if (monitor.status === 'paused') {
+        time_left_ms = monitor.paused_remaining_ms || 0;
+      }
+      return {
+        ...monitor,
+        time_left_ms,
+        time_left_seconds: Math.ceil(time_left_ms / 1000),
+      };
+    });
     res.status(200).json(monitors);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export function getMonitorById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const monitor = getMonitor(id);
+    if (!monitor) {
+      return res.status(404).json({ error: `Monitor with ID ${id} not found` });
+    }
+
+    let time_left_ms = 0;
+    if (monitor.status === 'active' && monitor.expires_at) {
+      time_left_ms = Math.max(0, monitor.expires_at - Date.now());
+    } else if (monitor.status === 'paused') {
+      time_left_ms = monitor.paused_remaining_ms || 0;
+    }
+
+    res.status(200).json({
+      ...monitor,
+      time_left_ms,
+      time_left_seconds: Math.ceil(time_left_ms / 1000),
+    });
   } catch (err) {
     next(err);
   }

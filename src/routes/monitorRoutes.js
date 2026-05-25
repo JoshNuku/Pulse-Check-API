@@ -4,6 +4,7 @@ import {
   heartbeatMonitor,
   pauseMonitor,
   getMonitors,
+  getMonitorById,
 } from '../controllers/monitorController.js';
 import { validateRegisterMonitor } from '../middleware/validator.js';
 import { validateApiKey } from '../middleware/auth.js';
@@ -17,5 +18,6 @@ router.post('/monitors', validateRegisterMonitor, registerMonitor);
 router.post('/monitors/:id/heartbeat', heartbeatMonitor);
 router.post('/monitors/:id/pause', pauseMonitor);
 router.get('/monitors', getMonitors);
+router.get('/monitors/:id', getMonitorById);
 
 export default router;

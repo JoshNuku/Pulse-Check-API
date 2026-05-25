@@ -1,0 +1,746 @@
+{
+	"info": {
+		"_postman_id": "8905391a-7a54-46ab-a02b-2a74c2e68407",
+		"name": "Pulse-Check-API Sentinel",
+		"description": "Comprehensive Postman Collection for testing the modular Dead Man's Switch API (Watchdog Sentinel). Includes positive workflows, edge cases, automated API key authorization, and validation test scripts.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health & Status",
+			"item": [
+				{
+					"name": "Base Route / Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								""
+							]
+						},
+						"description": "Checks if the API server is online and returning correct service metadata (does not require auth)."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response body matches service info\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"online\");",
+									"    pm.expect(jsonData.service).to.eql(\"CritMon Watchdog Sentinel API\");",
+									"    pm.expect(jsonData.version).to.eql(\"1.0.0\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "2. Core Operations (Happy Paths)",
+			"item": [
+				{
+					"name": "1. Register Advanced Monitor (Short Timeout)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate a unique device ID to ensure repeatability of the test run without collisions",
+									"const uniqueId = 'device-' + Date.now() + '-' + Math.floor(Math.random() * 1000);",
+									"pm.collectionVariables.set(\"deviceId\", uniqueId);",
+									"console.log(\"Generated dynamic deviceId: \" + uniqueId);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 (Created)\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Monitor registered with correct properties\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"deviceId\");",
+									"    ",
+									"    pm.expect(jsonData.message).to.eql(\"Monitor registered successfully\");",
+									"    pm.expect(jsonData.monitor).to.be.an(\"object\");",
+									"    pm.expect(jsonData.monitor.id).to.eql(expectedId);",
+									"    pm.expect(jsonData.monitor.timeout).to.eql(10);",
+									"    pm.expect(jsonData.monitor.alert_email).to.eql(\"operator@farm.com\");",
+									"    pm.expect(jsonData.monitor.webhook_url).to.eql(\"https://httpbin.org/post\");",
+									"    pm.expect(jsonData.monitor.backup_email).to.eql(\"lead-engineer@farm.com\");",
+									"    pm.expect(jsonData.monitor.status).to.eql(\"active\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{deviceId}}\",\n  \"timeout\": 10,\n  \"alert_email\": \"operator@farm.com\",\n  \"webhook_url\": \"https://httpbin.org/post\",\n  \"backup_email\": \"lead-engineer@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Registers a fully-featured monitor with a short 10-second timeout to test alerts, webhooks, and positive workflows."
+					}
+				},
+				{
+					"name": "2. Register Basic Monitor (Defaults)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate a unique basic device ID",
+									"const uniqueId = 'basic-' + Date.now() + '-' + Math.floor(Math.random() * 1000);",
+									"pm.collectionVariables.set(\"basicDeviceId\", uniqueId);",
+									"console.log(\"Generated dynamic basicDeviceId: \" + uniqueId);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 (Created)\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Monitor registered with default timeout and optional fields as null\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"basicDeviceId\");",
+									"    ",
+									"    pm.expect(jsonData.monitor.id).to.eql(expectedId);",
+									"    pm.expect(jsonData.monitor.alert_email).to.eql(\"basic@farm.com\");",
+									"    pm.expect(jsonData.monitor.webhook_url).to.be.null;",
+									"    pm.expect(jsonData.monitor.backup_email).to.be.null;",
+									"    pm.expect(jsonData.monitor.status).to.eql(\"active\");",
+									"    pm.expect(jsonData.monitor.timeout).to.be.a(\"number\"); // uses server's DEFAULT_TIMEOUT",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{basicDeviceId}}\",\n  \"alert_email\": \"basic@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Registers a basic monitor relying on the system default timeout configurations."
+					}
+				},
+				{
+					"name": "3. Send Heartbeat Ping",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Heartbeat reset the countdown timer\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include(\"Heartbeat received. Timer reset.\");",
+									"    pm.expect(jsonData.monitor.status).to.eql(\"active\");",
+									"    pm.expect(jsonData.monitor.last_ping).to.be.a(\"number\");",
+									"    pm.expect(jsonData.monitor.expires_at).to.be.a(\"number\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/{{deviceId}}/heartbeat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"{{deviceId}}",
+								"heartbeat"
+							]
+						},
+						"description": "Sends a heartbeat to reset the countdown timer on the advanced monitor."
+					}
+				},
+				{
+					"name": "4. Pause Monitor (Snooze)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Monitor paused for maintenance\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include(\"Monitor paused successfully\");",
+									"    pm.expect(jsonData.monitor.status).to.eql(\"paused\");",
+									"    pm.expect(jsonData.monitor.paused_remaining_ms).to.be.a(\"number\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/{{deviceId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"{{deviceId}}",
+								"pause"
+							]
+						},
+						"description": "Freezes the countdown timer for the monitor, preventing false alert triggers during scheduled maintenance."
+					}
+				},
+				{
+					"name": "5. Resume Monitor (via Heartbeat)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Heartbeat successfully unpaused and resumed the monitor\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include(\"Heartbeat received. Timer reset.\");",
+									"    pm.expect(jsonData.monitor.status).to.eql(\"active\");",
+									"    pm.expect(jsonData.monitor.paused_remaining_ms).to.be.null;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/{{deviceId}}/heartbeat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"{{deviceId}}",
+								"heartbeat"
+							]
+						},
+						"description": "Sending a heartbeat ping to a paused monitor automatically un-pauses it and restores active monitoring."
+					}
+				},
+				{
+					"name": "6. Get All Monitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array containing registered devices\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"deviceId\");",
+									"    var expectedBasicId = pm.collectionVariables.get(\"basicDeviceId\");",
+									"    ",
+									"    pm.expect(Array.isArray(jsonData)).to.be.true;",
+									"    ",
+									"    var foundAdvanced = jsonData.find(m => m.id === expectedId);",
+									"    var foundBasic = jsonData.find(m => m.id === expectedBasicId);",
+									"    ",
+									"    pm.expect(foundAdvanced).to.not.be.undefined;",
+									"    pm.expect(foundBasic).to.not.be.undefined;",
+									"    pm.expect(foundAdvanced.status).to.eql(\"active\");",
+									"    pm.expect(foundBasic.status).to.eql(\"active\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Lists all active, paused, down, and escalated monitors in the system."
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Error Handling & Security",
+			"item": [
+				{
+					"name": "1. Unauthorized Request - Missing API Key (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401 (Unauthorized)\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Unauthorized error message returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.eql(\"Unauthorized: Invalid or missing API Key\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"hacker-device-99\",\n  \"timeout\": 60,\n  \"alert_email\": \"hacker@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Validates that making a request without an API Key returns a 401 Unauthorized error."
+					}
+				},
+				{
+					"name": "2. Duplicate Monitor Registration (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 (Bad Request)\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Proper error message returned for duplicate ID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var conflictId = pm.collectionVariables.get(\"deviceId\");",
+									"    pm.expect(jsonData.error).to.eql(\"Monitor with ID \" + conflictId + \" already exists\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{deviceId}}\",\n  \"timeout\": 60,\n  \"alert_email\": \"another-operator@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Validates that registering a monitor with an already active ID returns a 400 error and descriptive message."
+					}
+				},
+				{
+					"name": "3. Invalid Email Registration (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 (Bad Request)\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Joi email validation error triggered\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"alert_email must be a valid email address\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"invalid-email-device\",\n  \"alert_email\": \"not-an-email\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Triggers a 400 Joi validation error by sending an invalid email address format."
+					}
+				},
+				{
+					"name": "4. Invalid ID Registration (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 (Bad Request)\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Joi character pattern validation error triggered\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"id can only contain alphanumeric characters, hyphens, and underscores\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"device with spaces!@#\",\n  \"alert_email\": \"operator@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Triggers a 400 Joi validation error by sending a monitor ID that contains unsupported special characters."
+					}
+				},
+				{
+					"name": "5. Negative Timeout Registration (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 (Bad Request)\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Joi positive integer validation error triggered\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"timeout must be a positive integer\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"negative-timeout-device\",\n  \"timeout\": -5,\n  \"alert_email\": \"operator@farm.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/monitors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors"
+							]
+						},
+						"description": "Triggers a 400 Joi validation error by specifying a negative integer value for the monitor timeout."
+					}
+				},
+				{
+					"name": "6. Heartbeat for Unknown Device (404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404 (Not Found)\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test(\"Not found error message returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.eql(\"Monitor with ID non-existent-123 not found\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/non-existent-123/heartbeat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"non-existent-123",
+								"heartbeat"
+							]
+						},
+						"description": "Triggers a 404 Not Found error by trying to check-in for a device ID that doesn't exist."
+					}
+				},
+				{
+					"name": "7. Pause for Unknown Device (404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404 (Not Found)\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test(\"Not found error message returned for pausing unknown device\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.eql(\"Monitor with ID non-existent-123 not found\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/monitors/non-existent-123/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"monitors",
+								"non-existent-123",
+								"pause"
+							]
+						},
+						"description": "Triggers a 404 Not Found error by trying to pause a device ID that doesn't exist."
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "deviceId",
+			"value": "solar-panel-44",
+			"type": "string"
+		},
+		{
+			"key": "basicDeviceId",
+			"value": "simple-device-99",
+			"type": "string"
+		},
+		{
+			"key": "apiKey",
+			"value": "sentinel-secure-key-2026",
+			"type": "string"
+		}
+	]
+}

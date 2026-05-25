@@ -1,135 +1,127 @@
-# Pulse-Check-API ("Watchdog" Sentinel)
-This challenge is designed to test your ability to bridge Computer Science fundamentals with Modern Backend Engineering.
+# Pulse-Check-API (Watchdog Sentinel)
 
-## 1. Business Context
-> **Client:** *CritMon Servers Inc.* (A Critical Infrastructure Monitoring Company).
+A high-reliability Dead Man's Switch API. Devices register a countdown timer. If the device fails to check in before the timer expires, the API triggers down alerts and multi-stage escalations. When a device recovers, it fires self-healing recovery notifications.
 
-### The Problem
-CritMon provides monitoring for remote solar farms and unmanned weather stations in areas with poor connectivity. These devices are supposed to send "I'm alive" signals every hour.
-
-Currently, CritMon has no way of knowing if a device has gone offline (due to power failure or theft) until a human manually checks the logs. They need a system that alerts *them* when a device *stops* talking.
-
-### The Solution
-You need to build a **Dead Man’s Switch API**. Devices will register a "monitor" with a countdown timer (e.g., 60 seconds). If the device fails to "ping" (send a heartbeat) to the API before the timer runs out, the system automatically triggers an alert.
+All core administrative and operational endpoints are secured via token-based **API Key Authentication**.
 
 ---
 
-## 2. Technical Objective
-Build a backend service that manages stateful timers.
+## 🚀 1. Setup Instructions
 
-* **Registration:** Allow a client to create a monitor with a specific timeout duration.
-* **Heartbeat:** Reset the countdown when a ping is received.
-* **Trigger:** Fire a webhook (or log a critical error) if the countdown reaches zero.
+### Prerequisites
+* **Node.js**: v18+ is required (Node native `fetch` is utilized).
 
+### 1. Clone the repository and install dependencies
+```bash
+git clone https://github.com/JoshNuku/Pulse-Check-API.git
+cd Pulse-Check-API
+npm install
+```
 
----
+### 2. Configure Environment Variables
+Create a `.env` file in the root folder to configure local variables:
+```env
+PORT=3000
+NODE_ENV=development
+API_KEY=sentinel-secure-key-2026
+ESCALATION_MULTIPLIER=2.0
+```
 
-## 3. Getting Started
+### 3. Run the Server
+```bash
+# Development mode (auto-reloads on save)
+npm run dev
 
-1.  **Fork this Repository:** Do not clone it directly. Create a fork to your own GitHub account.
-2.  **Environment:** You may use **Node.js, Python, Java or Go, etc.**.
-3.  **Submission:** Your final submission will be a link to your forked repository containing:
-    * The source code.
-    * The **Architecture Diagram**
-    * The `README.md` with documentation.
+# Production mode
+npm start
+```
 
----
+### 4. Running Verification Diagnostic Tests
+A fully automated secured end-to-end verification script is included in the project:
+```bash
+# Ensure server is running on port 3000, then execute:
+node scratch/verify.js
+```
 
-## 4. The Architecture Diagram 
-**Task:** Before you write any code, you must design the logic flow.
-**Deliverable:** A **Sequence Diagram** or **State Flowchart** embedded in your `README.md`.
-
----
-
-## 5. User Stories & Acceptance Criteria
-
-### User Story 1: Registering a Monitor
-**As a** device administrator,  
-**I want to** create a new monitor for my device,  
-**So that** the system knows to track its status.
-
-**Acceptance Criteria:**
-- [ ] The API accepts a `POST /monitors` request.
-- [ ] Input: `{"id": "device-123", "timeout": 60, "alert_email": "admin@critmon.com"}`.
-- [ ] The system starts a countdown timer for 60 seconds associated with `device-123`.
-- [ ] Response: `201 Created` with a confirmation message.
-
-### User Story 2: The Heartbeat (Reset)
-**As a** remote device,  
-**I want to** send a signal to the server,  
-**So that** my timer is reset and no alert is sent.
-
-**Acceptance Criteria:**
-- [ ] The API accepts a `POST /monitors/{id}/heartbeat` request.
-- [ ] If the ID exists and the timer has NOT expired:
-    - [ ] Restart the countdown from the beginning (e.g., reset to 60 seconds).
-    - [ ] Return `200 OK`.
-- [ ] If the ID does not exist:
-    - [ ] Return `404 Not Found`.
-
-### User Story 3: The Alert (Failure State)
-**As a** support engineer,  
-**I want to** be notified immediately if a device stops sending heartbeats,  
-**So that** I can deploy a repair team.
-
-**Acceptance Criteria:**
-- [ ] If the timer for `device-123` reaches 0 seconds (no heartbeat received):
-    - [ ] The system must internally "fire" an alert.
-    - [ ] **Implementation:** For this project, simply `console.log` a JSON object: `{"ALERT": "Device device-123 is down!", "time": <timestamp>}`. (Or simulate sending an email).
-    - [ ] The monitor status changes to `down`.
+### 5. Testing via Postman
+A comprehensive production-grade Postman collection (`Pulse-Check-API.postman_collection.json`) is included in the root folder.
+* **API Key Header**: Secure requests automatically attach the `x-api-key: {{apiKey}}` header.
+* **Repeated Runs**: Postman pre-request scripts dynamically generate unique device IDs (`device-1779667731...`) to ensure repeat runs do not collide.
 
 ---
 
-## 6. Bonus User Story (The "Snooze" Button)
-**As a** maintenance technician,  
-**I want to** pause monitoring while I am repairing a device,  
-**So that** I don't trigger false alarms.
+## 📊 2. Architecture & Flow
 
-**Acceptance Criteria:**
-- [ ] Create a `POST /monitors/{id}/pause` endpoint.
-- [ ] When called, the timer stops completely. No alerts will fire.
-- [ ] Calling the heartbeat endpoint again automatically "un-pauses" the monitor and restarts the timer.
+### Monitor Lifecycle Diagram
+```mermaid
+stateDiagram-v2
+    [*] --> Active: Register (Timer Starts)
+    Active --> Active: Heartbeat (Timer Resets)
+    Active --> Paused: Pause Command (Freeze)
+    Paused --> Active: Heartbeat (Timer Resumes)
+    Active --> Down: Timer Expires (Alert Triggered)
+    Down --> Active: Heartbeat (Self Heal Alert Triggered)
+    Down --> Escalated: Offline > Escalation Threshold (Escalation Alert Triggered)
+    Escalated --> Active: Heartbeat (Self Heal Alert Triggered)
+```
+
+### Secured System Components Flowchart
+```mermaid
+graph TD
+    Client -->|HTTP Header x-api-key| Auth[validateApiKey Middleware]
+    Auth -->|Verified| API[Express API Router]
+    Auth -->|Unauthorized| Err[401 JSON Block]
+    API --> Store[(In-Memory Map Cache)]
+    Store -->|Mutex-Lock Serialized Queue| Disk[(Atomic Async JSON Persistence)]
+    API --> Engine[Timer Engine Daemon]
+    Engine --> Alert[Alert Service]
+    Alert --> Webhook[Exponential Webhook Retry Queue]
+    Alert --> Email[Resilient Async Email Worker Queue]
+```
+
+---
+
+## 💎 3. Added Production Features
+
+Beyond the core requirements, this API is hardened with the following premium features:
+
+* **API Key Authentication Middleware**: Every administrative and operational endpoint is guarded by a global authentication filter validating the `x-api-key` header.
+* **Self-Healing Alerts**: When a device recovers from a `down` or `escalated` state back to `active`, the system triggers automatic recovery emails, webhook events (`device_recovered`), and console alerts.
+* **Non-Blocking Serialized Atomic Persistence**: Replaced standard blocking synchronous file operations. Writes are made to a `.tmp` file and atomically renamed at the OS level to prevent file corruption. Concurrency writes are managed by a sequential Mutex-like queue to avoid collisions.
+* **Outbound Email Worker Retry Logic**: Outbound notification dispatches that encounter transient network or SMTP failures are kept in-queue and retried up to 3 times before being safely discarded.
+* **Zero-Loss Reboot Recovery**: On server boot, the system parses stored absolute expiration timestamps. It determines remaining timeout windows or immediately flags devices that went offline while the server was rebooting.
+* **Webhook Retry Queue**: Outbound HTTP alerts feature a retry queue utilizing exponential backoff (`2s`, `4s`, `8s`, `16s`) with proper `AbortController` cleanup to avoid event loop memory leaks.
 
 ---
 
-## 7. The "Developer's Choice" Challenge
-We value engineers who look for "what's missing."
+## 🔌 4. API Endpoints
 
-**Task:** Identify **one** additional feature that makes this system more robust or user-friendly.
-1.  **Implement it.**
-2.  **Document it:** Explain *why* you added it in your README.
+All endpoints are prefixed with `/api` and require authentication.
 
----
+| Method | Endpoint | Description | Required Headers |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/monitors` | Registers a new countdown monitor switch. | `Content-Type: application/json`<br>`x-api-key: <key>` |
+| `POST` | `/api/monitors/:id/heartbeat` | Pings a heartbeat to reset or resume a monitor. | `x-api-key: <key>` |
+| `POST` | `/api/monitors/:id/pause` | Snoozes monitoring for maintenance. | `x-api-key: <key>` |
+| `GET` | `/api/monitors` | Lists all monitored devices and their states. | `x-api-key: <key>` |
+| `GET` | `/` | Public base route (Checks service health status). | *None (Public)* |
 
-## 8. Documentation Requirements
-Your final `README.md` must replace these instructions. It must cover:
+### Request Payload Examples
 
-1.  **Architecture Diagram** 
-2.  **Setup Instructions** 
-3.  **API Documentation** 
-4.  **The Developer's Choice:** Explanation of your added feature.
+#### Register a Monitor (`POST /api/monitors`)
+```json
+{
+  "id": "solar-inverter-4",
+  "timeout": 30,
+  "alert_email": "ops-alerts@farm.com",
+  "webhook_url": "https://alerts-endpoint.example.com/webhook",
+  "backup_email": "engineer-on-duty@farm.com"
+}
+```
 
----
-Submit your repo link via the [online](https://forms.office.com/e/rGKtfeZCsH) form.
-
-## 🛑 Pre-Submission Checklist
-**WARNING:** Before you submit your solution, you **MUST** pass every item on this list.
-If you miss any of these critical steps, your submission will be **automatically rejected** and you will **NOT** be invited to an interview.
-
-### 1. 📂 Repository & Code
-- [ ] **Public Access:** Is your GitHub repository set to **Public**? (We cannot review private repos).
-- [ ] **Clean Code:** Did you remove unnecessary files (like `node_modules`, `.env` with real keys, or `.DS_Store`)?
-- [ ] **Run Check:** if we clone your repo and run `npm start` (or equivalent), does the server start immediately without crashing?
-
-### 2. 📄 Documentation (Crucial)
-- [ ] **Architecture Diagram:** Did you include a visual Diagram (Flowchart or Sequence Diagram) in the README?
-- [ ] **README Swap:** Did you **DELETE** the original instructions (the problem brief) from this file and replace it with your own documentation?
-- [ ] **API Docs:** Is there a clear list of Endpoints and Example Requests in the README?
-
-
-### 3. 🧹 Git Hygiene
-- [ ] **Commit History:** Does your repo have multiple commits with meaningful messages? (A single "Initial Commit" is a red flag).
-
----
-**Ready?**
-If you checked all the boxes above, submit your repository link in the application form. Good luck! 🚀
+* **Joi Validations**:
+  - `id`: Must only contain alphanumeric characters, hyphens, and underscores.
+  - `timeout`: Must be a positive integer (seconds).
+  - `alert_email`: Must be a valid email format.
+  - `backup_email`: Must be a valid email format (optional).
+  - `webhook_url`: Must be a valid HTTP/HTTPS URL (optional).

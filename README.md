@@ -47,16 +47,53 @@ A comprehensive production-grade Postman collection (`Pulse-Check-API.postman_co
 
 ### Monitor Lifecycle Diagram
 ```mermaid
-stateDiagram-v2
-    [*] --> Active: Register (Timer Starts)
-    Active --> Active: Heartbeat (Timer Resets)
-    Active --> Paused: Pause Command (Freeze)
-    Paused --> Active: Heartbeat (Timer Resumes)
-    Active --> Down: Timer Expires (Alert Triggered)
-    Down --> Active: Heartbeat (Self Heal Alert Triggered)
-    Down --> Escalated: Offline > Escalation Threshold (Escalation Alert Triggered)
-    Escalated --> Active: Heartbeat (Self Heal Alert Triggered)
+sequenceDiagram
+    autonumber
+    actor Device as Monitored Device
+    actor Admin as System Administrator
+    participant API as Watchdog Sentinel API
+    participant Timer as Timer Engine Daemon
+    participant Alerts as Resilient Alert Service
+
+    Note over Device, API: Phase 1: Registration
+    Device ->> API: POST /api/monitors (with custom timeout)
+    API ->> Timer: Start active countdown timer
+    API -->> Device: 201 Created (Monitor Active)
+
+    Note over Device, API: Phase 2: Heartbeat Reset Loop
+    Device ->> API: POST /api/monitors/:id/heartbeat
+    API ->> Timer: Reset countdown timer back to timeout limit
+    API -->> Device: 200 OK (Heartbeat Confirmed)
+
+    Note over Admin, API: Phase 3: Maintenance Pause
+    Admin ->> API: POST /api/monitors/:id/pause
+    API ->> Timer: Freeze remaining time & Clear active timer
+    API -->> Admin: 200 OK (Monitor Paused)
+
+    Note over Device, API: Phase 4: Heartbeat Resume (Auto)
+    Device ->> API: POST /api/monitors/:id/heartbeat
+    API ->> Timer: Unpause & launch a fresh countdown timer
+    API -->> Device: 200 OK (Monitor Recovered & Resumed)
+
+    Note over Device, Alerts: Phase 5: Outage Timeout (Missed Ping)
+    Timer ->> Timer: Countdown reaches 0 (Timeout)
+    Timer ->> Alerts: Trigger downtime notification
+    Alerts ->> Admin: Send Downtime Email / Trigger Webhook
+    Timer ->> Timer: Schedule backup escalation timer
+
+    Note over Device, Alerts: Phase 6: Escalation Threshold Reached
+    Timer ->> Timer: Escalation timer reaches 0 (2x timeout elapsed)
+    Timer ->> Alerts: Trigger backup escalation alert
+    Alerts ->> Admin: Send Escalation Email to Backup Contact
+
+    Note over Device, Alerts: Phase 7: Self-Healing Recovery
+    Device ->> API: POST /api/monitors/:id/heartbeat (Device back online)
+    API ->> Timer: Reset and restore Active tracking state
+    API ->> Alerts: Dispatch Recovery Alert notifications
+    Alerts ->> Admin: Send 'Device Recovered' Email / Webhook
+    API -->> Device: 200 OK (Recovered)
 ```
+
 
 ### Secured System Components Flowchart
 ```mermaid
